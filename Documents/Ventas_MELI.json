@@ -1,0 +1,1295 @@
+{
+  "name": "Ventas_MELI",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "05 12 * * *"
+            }
+          ]
+        }
+      },
+      "id": "662f0422-4ef3-4bd2-bee2-77ee1031ec76",
+      "name": "Ejecutar Diario 12:05 PM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -528,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Configura tu zona horaria\nconst timezone = 'America/Mexico_City';\n\nconst now = DateTime.now().setZone(timezone);\n\n// Fecha Fin: Hoy a las 9:40 PM\nconst dateTo = now.set({ hour: 9, minute: 40, second: 0, millisecond: 0 });\n\n// Fecha Inicio: Ayer a las 9:40 PM\nconst dateFrom = dateTo.minus({ days: 1 });\n\nreturn {\n  seller_id: $input.first().json.id, // Pasamos el ID del nodo anterior\n  query_date_from: dateFrom.toISO(),\n  query_date_to: dateTo.toISO()\n};"
+      },
+      "id": "a9d8b8f0-d34f-484a-90b4-f356070c9e45",
+      "name": "Calcular Fechas",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -144,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.mercadolibre.com/orders/search",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "seller",
+              "value": "={{ $json.seller_id }}"
+            },
+            {
+              "name": "order.date_created.from",
+              "value": "={{ $json.query_date_from }}"
+            },
+            {
+              "name": "order.date_created.to",
+              "value": "={{ $json.query_date_to }}"
+            },
+            {
+              "name": "sort",
+              "value": "date_desc"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4dd1d3e1-68ec-4182-9437-05904b16eee2",
+      "name": "Buscar Ventas",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        48,
+        0
+      ],
+      "credentials": {
+        "oAuth2Api": {
+          "id": "grEzAHJeWowClyZD",
+          "name": "MELI cuenta"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b5b983c3-cb71-4c9c-ac68-37ec825a90fe",
+              "leftValue": "={{ $json.paging.total }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "e3418d16-17ef-455c-83c6-0ac12e7147db",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "chatId": "5778127690",
+        "text": "No se registraron ventas en MELI el dia de hoy",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        496,
+        -208
+      ],
+      "id": "b990b9fd-6a14-4cbf-b01f-c56bc317227c",
+      "name": "Send a text message",
+      "webhookId": "2764ed59-3675-468f-9bd4-c108c39992d4",
+      "credentials": {
+        "telegramApi": {
+          "id": "v4TdMCfcFCIDIVRz",
+          "name": "Lalo Inmobiliario"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://api.mercadolibre.com/users/me",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "options": {}
+      },
+      "id": "bd065b48-26db-4662-9491-8f6b9711edae",
+      "name": "Obtener ID Vendedor",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -336,
+        0
+      ],
+      "credentials": {
+        "oAuth2Api": {
+          "id": "grEzAHJeWowClyZD",
+          "name": "MELI cuenta"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "15QZdjHG0CoYdW3rxA_5TypZB2Xu_DaRh3yBbffwJAdM",
+          "mode": "list",
+          "cachedResultName": "Inventario Zeutica",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/15QZdjHG0CoYdW3rxA_5TypZB2Xu_DaRh3yBbffwJAdM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "=716672095",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "SKU PRODUCTO": "={{ $json['SKU ORIGINAL'] }}",
+            "NOMBRE PRODUCTO": "={{ $json.PRODUCTO }}",
+            "ID VENTA": "={{ $json.ID_VENTA }}",
+            "CANTIDAD": "={{ $json['CANTIDAD FINAL'] }}",
+            "FECHA": "={{ $json.FECHA }}",
+            "NOMBRE COMPRADOR": "={{ $json.NOMBRE_COMPRADOR }}",
+            "OTROS": "={{ $json.OTROS }}",
+            "DIA DE DESCARGA": "={{ $now.format('yyyy-MM-dd') }}"
+          },
+          "matchingColumns": [
+            "ID VENTA"
+          ],
+          "schema": [
+            {
+              "id": "SKU PRODUCTO",
+              "displayName": "SKU PRODUCTO",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "NOMBRE PRODUCTO",
+              "displayName": "NOMBRE PRODUCTO",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ID VENTA",
+              "displayName": "ID VENTA",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "CANTIDAD",
+              "displayName": "CANTIDAD",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "FECHA",
+              "displayName": "FECHA",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "NOMBRE COMPRADOR",
+              "displayName": "NOMBRE COMPRADOR",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "OTROS",
+              "displayName": "OTROS",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "DIA DE DESCARGA",
+              "displayName": "DIA DE DESCARGA",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        928,
+        64
+      ],
+      "id": "7a583db6-1e4a-4952-a21f-7a99473ba834",
+      "name": "Registro Ventas",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "0y6IiJ3EYNxYu2V0",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "15QZdjHG0CoYdW3rxA_5TypZB2Xu_DaRh3yBbffwJAdM",
+          "mode": "list",
+          "cachedResultName": "Inventario Zeutica",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/15QZdjHG0CoYdW3rxA_5TypZB2Xu_DaRh3yBbffwJAdM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Inventario",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/15QZdjHG0CoYdW3rxA_5TypZB2Xu_DaRh3yBbffwJAdM/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "CODIGO",
+              "lookupValue": "={{ $json[\"SKU PRODUCTO\"] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1248,
+        64
+      ],
+      "id": "822565d8-0bf9-4e46-9d8b-94f43f890781",
+      "name": "Inventario Stock",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "0y6IiJ3EYNxYu2V0",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "15QZdjHG0CoYdW3rxA_5TypZB2Xu_DaRh3yBbffwJAdM",
+          "mode": "list",
+          "cachedResultName": "Inventario Zeutica",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/15QZdjHG0CoYdW3rxA_5TypZB2Xu_DaRh3yBbffwJAdM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Hoja 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/15QZdjHG0CoYdW3rxA_5TypZB2Xu_DaRh3yBbffwJAdM/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "CODIGO": "={{ $json.CODIGO }}",
+            "INVENTARIO FULL": "={{ $json[\"INVENTARIO FULL\"] }}"
+          },
+          "matchingColumns": [
+            "CODIGO"
+          ],
+          "schema": [
+            {
+              "id": "CODIGO",
+              "displayName": "CODIGO",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "DESCRIPCION DEL PRODUCTO",
+              "displayName": "DESCRIPCION DEL PRODUCTO",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "CANTIDAD",
+              "displayName": "CANTIDAD",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "INVENTARIO FULL",
+              "displayName": "INVENTARIO FULL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2128,
+        -64
+      ],
+      "id": "5b90578a-1a9c-40ac-94d7-7437891b0161",
+      "name": "Actualizar Inventario",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "0y6IiJ3EYNxYu2V0",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtenemos el stock que viene del paso anterior\nconst inventoryItems = $input.all();\n\n// Obtenemos TODAS las ventas para buscar la correcta\nconst allSales = $(\"Registro Ventas\").all();\n\nreturn inventoryItems.map((item) => {\n  const currentSKU = item.json.CODIGO;\n  const stockActual = parseFloat(item.json.CANTIDAD) || 0;\n\n  // BUSQUEDA INTELIGENTE: Buscamos en las ventas el ítem que coincida con este SKU\n  const ventaCorrespondiente = allSales.find(sale => \n    sale.json[\"SKU PRODUCTO\"] === currentSKU || \n    sale.json[\"SKU PRODUCTO\"] === currentSKU + \"full\"\n  );\n\n  let cantidadVendida = 0;\n  let skuFinal = currentSKU;\n\n  if (ventaCorrespondiente) {\n    cantidadVendida = parseFloat(ventaCorrespondiente.json.CANTIDAD) || 0;\n    skuFinal = ventaCorrespondiente.json[\"SKU PRODUCTO\"];\n  }\n\n  const nuevoStock = stockActual - cantidadVendida;\n\n  return {\n    json: {\n      id_producto: currentSKU,\n      skufull: skuFinal,\n      nuevo_stock: nuevoStock,\n      stock_anterior: stockActual,\n      cantidad_restada: cantidadVendida\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1744,
+        128
+      ],
+      "id": "df81e9eb-bbb3-4ade-9d5d-4dcaf8442360",
+      "name": "Codigo Limpio"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Obtenemos el inventario\nconst inventoryItems = $input.all();\n\n// 2. Obtenemos las ventas\nlet salesItems;\ntry {\n    salesItems = $('Registro Ventas').all();\n} catch (error) {\n    console.log(\"Error CRÍTICO: No se encontró el nodo 'Registro Ventas'\");\n    return inventoryItems;\n}\n\nconsole.log(`--- INICIO: Procesando ${inventoryItems.length} items de inventario y ${salesItems.length} ventas ---`);\n\n// 3. Iteramos las ventas\nfor (const [index, saleItem] of salesItems.entries()) {\n    const saleData = saleItem.json;\n    \n    // DEBUG: Ver qué columnas tiene realmente la venta\n    if (index === 0) {\n        console.log(\"Columnas detectadas en la primera venta:\", Object.keys(saleData));\n    }\n\n    // Buscamos las propiedades sin importar si son mayúsculas o minúsculas\n    // Esto busca \"CODIGO\", \"Codigo\", \"codigo\", \"CANTIDAD\", \"Cantidad\", etc.\n    const codeKey = Object.keys(saleData).find(key => key.toUpperCase() === 'SKU PRODUCTO');\n    const qtyKey = Object.keys(saleData).find(key => key.toUpperCase() === 'CANTIDAD');\n\n    if (codeKey && qtyKey) {\n        // Obtenemos valores usando las llaves encontradas\n        let saleCodeRaw = saleData[codeKey].toString().toUpperCase().trim();\n        const saleQty = parseFloat(saleData[qtyKey]) || 0;\n\n        // DEBUG: Para ver qué estamos leyendo\n        console.log(`Venta #${index + 1}: Código leído \"${saleCodeRaw}\" - Cantidad: ${saleQty}`);\n\n        // 4. Verificamos si termina en \"FULL\"\n        if (saleCodeRaw.endsWith(\"FULL\")) {\n            const cleanCode = saleCodeRaw.replace(\"FULL\", \"\").trim();\n            \n            // 5. Buscamos en el inventario\n            const foundInventoryItem = inventoryItems.find(item => {\n                // Asumimos que en inventario la columna sí es \"CODIGO\" (según tu foto input)\n                const invCode = item.json.CODIGO ? item.json.CODIGO.toString().toUpperCase().trim() : \"\";\n                return invCode === cleanCode;\n            });\n\n            if (foundInventoryItem) {\n                const currentStock = parseFloat(foundInventoryItem.json['INVENTARIO FULL']) || 0;\n                const newStock = currentStock - saleQty;\n                \n                // Actualizamos\n                foundInventoryItem.json['INVENTARIO FULL'] = newStock;\n                \n                console.log(`   ✅ ÉXITO: ${cleanCode} actualizado. Stock: ${currentStock} -> ${newStock}`);\n            } else {\n                console.log(`   ⚠️ ALERTA: Código limpio \"${cleanCode}\" no encontrado en Inventario.`);\n            }\n        } \n    } else {\n        console.log(`   ❌ ERROR: No se encontraron columnas 'CODIGO' o 'CANTIDAD' en la venta #${index + 1}.`);\n    }\n}\n\nreturn inventoryItems;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1920,
+        -64
+      ],
+      "id": "9f9eb7ba-7740-4ee6-a81e-d15ba5a1ef12",
+      "name": "Codigo Full"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "15QZdjHG0CoYdW3rxA_5TypZB2Xu_DaRh3yBbffwJAdM",
+          "mode": "list",
+          "cachedResultName": "Inventario Zeutica",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/15QZdjHG0CoYdW3rxA_5TypZB2Xu_DaRh3yBbffwJAdM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Hoja 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/15QZdjHG0CoYdW3rxA_5TypZB2Xu_DaRh3yBbffwJAdM/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "CODIGO": "={{ $json.id_producto }}",
+            "CANTIDAD": "={{ $node[\"Codigo Limpio\"].json.nuevo_stock  }}"
+          },
+          "matchingColumns": [
+            "CODIGO"
+          ],
+          "schema": [
+            {
+              "id": "CODIGO",
+              "displayName": "CODIGO",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "DESCRIPCION DEL PRODUCTO",
+              "displayName": "DESCRIPCION DEL PRODUCTO",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "CANTIDAD",
+              "displayName": "CANTIDAD",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "INVENTARIO FULL",
+              "displayName": "INVENTARIO FULL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1952,
+        128
+      ],
+      "id": "11d35f08-1f9d-4c1b-a8bf-d1df1acd1e80",
+      "name": "Actualizar Inventario1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "0y6IiJ3EYNxYu2V0",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "results",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        432,
+        64
+      ],
+      "id": "8f37bbf2-2071-4d33-918e-c8832135c1ac",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Recuperamos el valor del item actual directamente usando $json\nconst sku = $json[\"SKU PRODUCTO\"];\nlet skuResultado = sku;\n// el sku esta despues del '_'  \nif (sku === \"500_ESCFANBLA\") {\n    skuResultado = \"ESCFANBLA\";\n} \n// 2. Casos generales: el sku esta antes del \"_\"\nelse if (sku.includes('_')) {\n    const partes = sku.split('_');\n    skuResultado = partes[0]; // Toma la primer parte antes de \"_\"        \n    \n} else if (sku.includes('FULL')) {\n    const partes = sku.split('FULL');\n    skuResultado = partes[0]; // Toma la primer parte antes de \"_\"        \n    \n}\n\n// En este modo, solo retornamos el objeto JSON individual\nreturn {\n    \"SKU PRODUCTO\": skuResultado,\n    \"SKU ORIGINAL\": sku\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1088,
+        64
+      ],
+      "id": "6abd72b9-bcc2-4cf3-807a-3ee93bcacf3e",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Code in JavaScript').item.json[\"SKU ORIGINAL\"] }}",
+                    "rightValue": "FULL",
+                    "operator": {
+                      "type": "string",
+                      "operation": "endsWith"
+                    },
+                    "id": "f9514f01-ad5c-404e-8ed0-ff3256ac9f94"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "FULL"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Sin FULL"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1440,
+        64
+      ],
+      "id": "bfeaf812-60d3-4c2b-b710-2c9cad88cd2b",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "amount": 10
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1744,
+        -64
+      ],
+      "id": "4dde913a-be93-4c67-85c0-88706f3422e4",
+      "name": "Wait",
+      "webhookId": "6b22a40e-1f33-4b1b-bf7c-19fa52300a8b"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cb00dce4-fbf7-46a6-b10c-61be6578a854",
+              "name": "codigo",
+              "value": "={{ $json.order_items[0].item.seller_sku }}",
+              "type": "string"
+            },
+            {
+              "id": "9ade7d28-51ba-4531-a600-c8e817239958",
+              "name": "producto",
+              "value": "={{ $json.order_items[0].item.title }}",
+              "type": "string"
+            },
+            {
+              "id": "99fcf8f3-48ce-4a90-8692-99953e1f60fa",
+              "name": "id_venta",
+              "value": "={{ $json.order_items[0].item.variation_id }}",
+              "type": "number"
+            },
+            {
+              "id": "e4c74495-7557-4566-8938-e6c0a9d73dc7",
+              "name": "cantidad",
+              "value": "={{ $json.order_items[0].quantity }}",
+              "type": "number"
+            },
+            {
+              "id": "d3ede8df-203b-4815-9065-c898b980c274",
+              "name": "fecha",
+              "value": "={{ $json.payments[0].date_created }}",
+              "type": "string"
+            },
+            {
+              "id": "d23b9caf-7d00-4a18-bbff-03f53871dddb",
+              "name": "nombre_comprador",
+              "value": "={{ $json.buyer.nickname }}",
+              "type": "string"
+            },
+            {
+              "id": "e1c40ac5-f6d8-4a71-b17d-3cfc78092d98",
+              "name": "otros",
+              "value": "={{ $json.payments[0].payment_type }}",
+              "type": "string"
+            },
+            {
+              "id": "c2d860bb-5494-4383-bcde-bab2331ce061",
+              "name": "fecha",
+              "value": "={{ $now.format('dd-MM-yyyy') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        592,
+        64
+      ],
+      "id": "70fc4fa2-5ba9-4e87-96aa-83aa4f5ac3d2",
+      "name": "Datos"
+    },
+    {
+      "parameters": {
+        "url": "https://api.mercadolibre.com/users/me",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "options": {}
+      },
+      "id": "a21922df-de5b-4aea-bd47-ca949df4c119",
+      "name": "1. Obtener Mi ID",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -320,
+        320
+      ],
+      "credentials": {
+        "oAuth2Api": {
+          "id": "grEzAHJeWowClyZD",
+          "name": "MELI cuenta"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://api.mercadolibre.com/users/{{ $json.id }}/items/search",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "status",
+              "value": "active"
+            },
+            {
+              "name": "limit",
+              "value": "50"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f1b44eba-e83c-45f6-a75e-dc23c2784c75",
+      "name": "2. Buscar Items Activos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -112,
+        320
+      ],
+      "credentials": {
+        "oAuth2Api": {
+          "id": "grEzAHJeWowClyZD",
+          "name": "MELI cuenta"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "results",
+        "options": {}
+      },
+      "id": "ddce0ee0-69f6-4ee1-8a46-e9333a2d61e0",
+      "name": "Split Out IDs",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        64,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.mercadolibre.com/items/{{ $json.results }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "id": "3cc8e290-8319-4b36-a0c8-43e75f77cd1c",
+      "name": "3. Obtener Detalles Item",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        272,
+        320
+      ],
+      "credentials": {
+        "oAuth2Api": {
+          "id": "grEzAHJeWowClyZD",
+          "name": "MELI cuenta"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "15QZdjHG0CoYdW3rxA_5TypZB2Xu_DaRh3yBbffwJAdM",
+          "mode": "list",
+          "cachedResultName": "Inventario Zeutica",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/15QZdjHG0CoYdW3rxA_5TypZB2Xu_DaRh3yBbffwJAdM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1026490190,
+          "mode": "list",
+          "cachedResultName": "PubActivas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/15QZdjHG0CoYdW3rxA_5TypZB2Xu_DaRh3yBbffwJAdM/edit#gid=1026490190"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ID DE ML": "={{ $json.ID_ML }}",
+            "SKU": "={{ $json.SKU }}",
+            "TITULO": "={{ $json.TITULO }}",
+            "PRECIO": "={{ $json.PRECIO }}",
+            "STOCK": "={{ $json.STOCK }}",
+            "PERMALINK": "={{ $json.PERMALINK }}"
+          },
+          "matchingColumns": [
+            "ID DE ML"
+          ],
+          "schema": [
+            {
+              "id": "SKU",
+              "displayName": "SKU",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ID DE ML",
+              "displayName": "ID DE ML",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "TITULO",
+              "displayName": "TITULO",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "PRECIO",
+              "displayName": "PRECIO",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "STOCK",
+              "displayName": "STOCK",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "PERMALINK",
+              "displayName": "PERMALINK",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        688,
+        320
+      ],
+      "id": "366113e1-a880-45b0-b9da-3e96a5515d4a",
+      "name": "Append or update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "0y6IiJ3EYNxYu2V0",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const resultados = [];\n\nfor (const item of items) {\n    const data = item.json;\n\n    // Función pequeña para buscar \"SELLER_SKU\" dentro de una lista de atributos\n    const extraerSkuDeAtributos = (atributos) => {\n        if (!atributos) return null;\n        // Buscamos el atributo cuyo ID sea exactamente 'SELLER_SKU'\n        const atributoSku = atributos.find(a => a.id === 'SELLER_SKU');\n        return atributoSku ? atributoSku.value_name : null;\n    };\n\n    // CASO A: El producto tiene Variantes (Tallas, Colores)\n    if (data.variations && data.variations.length > 0) {\n        for (const variant of data.variations) {\n            \n            // 1. Intentamos leer el campo directo (método viejo)\n            let skuFinal = variant.seller_custom_field;\n\n            // 2. Si está vacío, usamos la función para buscar en los atributos (método nuevo)\n            if (!skuFinal) {\n                skuFinal = extraerSkuDeAtributos(variant.attributes);\n            }\n\n            resultados.push({\n                json: {\n                    \"TITULO\": data.title,\n                    \"TIPO\": \"Variante\",\n                    \"ID_ML\": data.id,\n                    \"ID_VARIANTE\": variant.id,\n                    \"SKU\": skuFinal || \"NO_ENCONTRADO\", // Si sigue fallando, dirá esto\n                    \"PRECIO\": data.price,\n                    \"STOCK\": variant.available_quantity,\n                    \"PERMALINK\": data.permalink\n                }\n            });\n        }\n    } \n    // CASO B: Producto Simple (Sin variantes)\n    else {\n        let skuFinal = data.seller_custom_field;\n        \n        if (!skuFinal) {\n            skuFinal = extraerSkuDeAtributos(data.attributes);\n        }\n\n        resultados.push({\n            json: {\n                \"TITULO\": data.title,\n                \"TIPO\": \"Simple\",\n                \"ID_ML\": data.id,\n                \"ID_VARIANTE\": null,\n                \"SKU\": skuFinal || \"NO_ENCONTRADO\",\n                \"PRECIO\": data.price,\n                \"STOCK\": data.available_quantity,\n                \"PERMALINK\": data.permalink\n            }\n        });\n    }\n}\n\nreturn resultados;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        320
+      ],
+      "id": "e6df1b00-7071-4af8-a83c-c7f664261eae",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "content": "## OBTIENE DATOS DE LA API DE MELI\n\nEstos nodos extraen el ID d vendedor para despues solicitar las ventas de un intervalo de 9:30hrs como corte.",
+        "height": 368,
+        "width": 768,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -576,
+        -144
+      ],
+      "typeVersion": 1,
+      "id": "462b2e85-30ac-4fda-9f09-1a6fb6f8fed0",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## SEPARAR DATOS Y REGISTRO DE VENTAS\n**Estos nodos separan los items y hacen el registro de las ventas en google sheets y extraen el inventario para hacer el calculo nuevo.",
+        "height": 304,
+        "width": 1008,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        368,
+        -32
+      ],
+      "typeVersion": 1,
+      "id": "e229e94c-1449-4cb6-bae3-bec0d8dbef52",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## MENSAJE 0 VENTAS\n**Este nodo envía un mensaje de telegram si la venta es = a 0.",
+        "height": 256,
+        "width": 400,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        336,
+        -304
+      ],
+      "typeVersion": 1,
+      "id": "29a67920-d849-405e-a45f-df9ef757de10",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "## REGISTRAR EL NUEVO INVENTARIO\n**Estos nodos registran el nuevo inventario según sea full o directo.",
+        "height": 512,
+        "width": 784,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1632,
+        -192
+      ],
+      "typeVersion": 1,
+      "id": "5ae97c8a-7d20-4ae3-93a3-eb4aa892df7e",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "## FLUJO VENTAS ACTIVAS\n**Estos nodos descargan las publicaciones activas.",
+        "height": 288,
+        "width": 1696,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -736,
+        288
+      ],
+      "typeVersion": 1,
+      "id": "2cbd0631-9f8c-425a-877f-42f0c3dea35d",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const sku = $json[\"codigo\"] || \"\";\nlet cantidad = $json[\"cantidad\"] || 0;\nlet multiplicador = 1;\n\n// Si el SKU tiene un guion bajo, intentamos sacar el número del final\nif (sku === \"500_ESCFANBLA\") {\n    multiplicador = 5;\n} \n// Casos generales: El multiplicador está al final después de un \"_\"\nelse if (sku.includes('_')) {\n    const partes = sku.split('_');\n    const ultimaPieza = partes[partes.length - 1]; // Toma todo lo que esté después del último \"_\"\n    const posibleMultiplicador = parseInt(ultimaPieza);\n    \n    // Si la última pieza realmente era un número, lo usamos\n    if (!isNaN(posibleMultiplicador)) {\n        multiplicador = posibleMultiplicador;\n    }\n}\n\n// En este modo, solo retornamos el objeto JSON individual\nreturn {\n    \"SKU ORIGINAL\": sku,\n    \"PRODUCTO\": $json[\"producto\"],\n    \"ID_VENTA\": $json[\"id_venta\"],  \n    \"CANTIDAD ORIGINAL\": cantidad,\n    \"CANTIDAD FINAL\": cantidad * multiplicador,\n    \"FECHA\": $json[\"fecha\"],\n    \"NOMBRE_COMPRADOR\": $json[\"nombre_comprador\"],\n    \"OTROS\": $json[\"otros\"]\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        752,
+        64
+      ],
+      "id": "a346f216-a5df-4e9e-a606-aae13ea2da53",
+      "name": "Ajusta Multiplos"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Ejecutar Diario 12:05 PM": {
+      "main": [
+        [
+          {
+            "node": "Obtener ID Vendedor",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "1. Obtener Mi ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calcular Fechas": {
+      "main": [
+        [
+          {
+            "node": "Buscar Ventas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Ventas": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message": {
+      "main": [
+        []
+      ]
+    },
+    "Obtener ID Vendedor": {
+      "main": [
+        [
+          {
+            "node": "Calcular Fechas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registro Ventas": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Inventario Stock": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Actualizar Inventario": {
+      "main": [
+        []
+      ]
+    },
+    "Codigo Limpio": {
+      "main": [
+        [
+          {
+            "node": "Actualizar Inventario1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Codigo Full": {
+      "main": [
+        [
+          {
+            "node": "Actualizar Inventario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Actualizar Inventario1": {
+      "main": [
+        []
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Inventario Stock",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Codigo Limpio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Codigo Full",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Datos": {
+      "main": [
+        [
+          {
+            "node": "Ajusta Multiplos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "1. Obtener Mi ID": {
+      "main": [
+        [
+          {
+            "node": "2. Buscar Items Activos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2. Buscar Items Activos": {
+      "main": [
+        [
+          {
+            "node": "Split Out IDs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out IDs": {
+      "main": [
+        [
+          {
+            "node": "3. Obtener Detalles Item",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3. Obtener Detalles Item": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ajusta Multiplos": {
+      "main": [
+        [
+          {
+            "node": "Registro Ventas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Mexico_City",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": false
+  },
+  "versionId": "01253e2d-430b-42b7-9a74-77e303c89b8d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "40d2314a08e5e89eac1816ce0e3dc3dc5459dbb43633036a84acda02e26beaa2"
+  },
+  "id": "S9khyP9utx75f4XW",
+  "tags": []
+}
